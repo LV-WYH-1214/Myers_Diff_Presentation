@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Myers 差分算法交互式可视化沙盒 | 算法设计与分析</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #111827;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .title-group h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid var(--blue);
+      color: #93c5fd;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .title-group p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .input-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card);
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .input-box label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .input-box input {
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #fff;
+      font-family: "Menlo", monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 5px;
+      width: 128px;
+      text-transform: uppercase;
+    }
+    .preset-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+    }
+    .preset-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    button.preset-btn {
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      background: #1e293b;
+      border-color: #334155;
+      color: #cbd5e1;
+    }
+    button.preset-btn:hover {
+      background: #334155;
+      color: #fff;
+      border-color: var(--blue);
+    }
+    button {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #334155;
+      border-color: #64748b;
+    }
+    button.primary {
+      background: var(--blue);
+      border-color: #2563eb;
+      color: #fff;
+    }
+    button.primary:hover {
+      background: #2563eb;
+    }
+    button.active-mode {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--amber);
+      color: #fcd34d;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 16px;
+      padding: 16px 24px;
+      flex: 1;
+    }
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 10px;
+    }
+    .panel-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .canvas-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #090d16;
+      border-radius: 10px;
+      border: 1px solid #1e293b;
+      padding: 10px;
+      flex: 1;
+      min-height: 440px;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--muted);
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .stat-card .value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin-top: 3px;
+      font-family: "Menlo", monospace;
+    }
+    .v-table-wrap {
+      overflow-x: auto;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: "Menlo", monospace;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    th, td {
+      border: 1px solid #1e293b;
+      padding: 6px 8px;
+    }
+    th {
+      background: #1e293b;
+      color: #93c5fd;
+    }
+    td.active-k {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fde047;
+      font-weight: 700;
+    }
+    .diff-output {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px;
+      background: #090d16;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      min-height: 46px;
+      align-items: center;
+    }
+    .diff-token {
+      font-family: "Menlo", monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 4px 9px;
+      border-radius: 6px;
+    }
+    .diff-del { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--red); color: #fca5a5; }
+    .diff-ins { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--green); color: #6ee7b7; }
+    .diff-keep { background: rgba(59, 130, 246, 0.2); border: 1px solid var(--blue); color: #93c5fd; }
+    .step-log {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: #cbd5e1;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 190px;
+    }
+    .step-log strong { color: #fde047; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <h1>
+        <span>⚡ Myers 差分算法交互式演示沙盒</span>
+        <span class="badge">O((N+M)D) 编辑图动态推演</span>
+      </h1>
+      <p>支持单步调试 D = 0 → D_min、一维状态数组 V[k] 实时监控、双向搜索找“中间蛇”与自定义字符串测试</p>
+    </div>
+    <div class="controls-bar">
+      <div class="input-box">
+        <label>源串 A:</label>
+        <input id="inputA" value="ABCABBA" maxlength="16" />
+        <label>目标 B:</label>
+        <input id="inputB" value="CBABAC" maxlength="16" />
+        <button onclick="resetStrings()">应用算例</button>
+      </div>
+      <div class="preset-group">
+        <span class="preset-label">一键算例:</span>
+        <button class="preset-btn" onclick="applyPreset('ABCABBA', 'CBABAC')">🎯 论文经典</button>
+        <button class="preset-btn" onclick="applyPreset('A{B}C{}', '{}A{B}C')">⚠️ 括号迷魂阵</button>
+        <button class="preset-btn" onclick="applyPreset('MYERSDIFF', 'MYERSDIFF')">⚡ 完全相同 (D=0)</button>
+      </div>
+      <button onclick="stepPrev()">⏮ 上一步 (D-1)</button>
+      <button class="primary" id="playBtn" onclick="togglePlay()">▶ 自动播放</button>
+      <button onclick="stepNext()">下一步 (D+1) ⏭</button>
+      <button id="biBtn" onclick="toggleBidirectional()">🔄 切换：双向分治找中间蛇</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Panel: Edit Graph Canvas -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2 id="canvasTitle">编辑图 (Edit Graph) 与对角线贪心波前</h2>
+        <span style="font-size: 0.8rem; color: var(--muted);">快捷键：← / → 切换步数 D，空格键播放/暂停</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="gridCanvas" width="680" height="520"></canvas>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="dot" style="background:#f59e0b;"></span>虚线：字符相等可滑行对角线 (Snake, 代价 0)</div>
+        <div class="legend-item"><span class="dot" style="background:#ef4444;"></span>向右：删除 A 字符 (代价 +1)</div>
+        <div class="legend-item"><span class="dot" style="background:#10b981;"></span>向下：插入 B 字符 (代价 +1)</div>
+        <div class="legend-item"><span class="dot" style="background:#3b82f6;"></span>蓝色粗箭头：贪心免费滑行通道</div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Live State V[k], Complexity & Step Log -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2>一维状态数组 V[k] 与搜索效率实时对比</h2>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">当前编辑步数 D / 最小 D*</div>
+          <div class="value" id="statD" style="color: #fde047;">0 / 5</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Myers 已探索状态数</div>
+          <div class="value" id="statMyersNodes" style="color: #60a5fa;">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">课本二维 DP 固定格子数</div>
+          <div class="value" id="statDpNodes" style="color: #f87171;">56 (100%)</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600;">
+          📌 一维数组 V[k] 快照（记录对角线 k = x - y 上能抵达的最大横坐标 x，高亮为当前轮更新项）：
+        </div>
+        <div class="v-table-wrap">
+          <table id="vTable"></table>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600;">
+          📝 当前步数 D 状态转移详解（可直接照念讲解）：
+        </div>
+        <div class="step-log" id="stepLog"></div>
+      </div>
+
+      <div>
+        <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600;">
+          🎯 最短编辑脚本 (SES / `git diff` 输出结果)：
+        </div>
+        <div class="diff-output" id="diffOutput"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let A = "ABCABBA";
+    let B = "CBABAC";
+    let trace = null;
+    let currentStep = 0;
+    let playTimer = null;
+    let isBidirectional = false;
+
+    function computeMyers(strA, strB) {
+      const n = strA.length, m = strB.length;
+      const maxD = n + m;
+      let v = { 1: 0 };
+      const history = [];
+      const parent = {};
+      let foundD = null;
+
+      for (let d = 0; d <= maxD; d++) {
+        const edges = [];
+        const vNext = { ...v };
+        for (let k = -d; k <= d; k += 2) {
+          let prevK, px, py, mx, my, moveType;
+          if (k === -d || (k !== d && (v[k - 1] ?? -1) < (v[k + 1] ?? -1))) {
+            prevK = k + 1;
+            px = v[prevK] ?? 0;
+            py = px - prevK;
+            mx = px;
+            my = py + 1;
+            moveType = d === 0 ? "start" : "down";
+          } else {
+            prevK = k - 1;
+            px = v[prevK] ?? 0;
+            py = px - prevK;
+            mx = px + 1;
+            my = py;
+            moveType = "right";
+          }
+          if (d === 0) { px = 0; py = 0; mx = 0; my = 0; }
+
+          let ex = mx, ey = my;
+          const snakes = [];
+          while (ex < n && ey < m && strA[ex] === strB[ey]) {
+            snakes.push([ex, ey, ex + 1, ey + 1]);
+            ex++;
+            ey++;
+          }
+          vNext[k] = ex;
+          parent[`${d},${k}`] = { px, py, mx, my, ex, ey, moveType, prevK, snakes };
+          edges.push({ d, k, px, py, mx, my, ex, ey, moveType, snakes });
+
+          if (ex >= n && ey >= m && foundD === null) {
+            foundD = d;
+            break;
+          }
+        }
+        v = vNext;
+        history.push({ d, v: { ...v }, edges });
+        if (foundD !== null) break;
+      }
+
+      // Backtrack optimal path
+      const path = [];
+      let currK = n - m;
+      for (let d = foundD; d >= 0; d--) {
+        const step = parent[`${d},${currK}`];
+        if (!step) break;
+        for (let i = step.snakes.length - 1; i >= 0; i--) {
+          const [sx1, sy1, sx2, sy2] = step.snakes[i];
+          path.push({ x1: sx1, y1: sy1, x2: sx2, y2: sy2, type: "snake", ch: strA[sx1] });
+        }
+        if (d > 0) {
+          const ch = step.moveType === "right" ? strA[step.px] : strB[step.py];
+          path.push({ x1: step.px, y1: step.py, x2: step.mx, y2: step.my, type: step.moveType, ch });
+        }
+        currK = step.prevK;
+      }
+      path.reverse();
+      const bi = computeBidirectionalMyers(strA, strB);
+      return { n, m, history, path, foundD, bi };
+    }
+
+    function computeBidirectionalMyers(strA, strB) {
+      const n = strA.length, m = strB.length;
+      const delta = n - m;
+      const odd = (delta & 1) !== 0;
+      const maxHalf = Math.ceil((n + m) / 2) + 1;
+
+      const vFwd = { 1: 0 };
+      const vBwd = { 1: 0 };
+      const fwdRounds = [];
+      const bwdRounds = [];
+      const steps = [];
+
+      // Forward d = 0
+      let fx0 = 0, fy0 = 0;
+      const fSnakes0 = [];
+      while (fx0 < n && fy0 < m && strA[fx0] === strB[fy0]) {
+        fSnakes0.push([fx0, fy0, fx0 + 1, fy0 + 1]);
+        fx0++; fy0++;
+      }
+      vFwd[0] = fx0;
+      fwdRounds.push([{ d: 0, k: 0, px: 0, py: 0, mx: 0, my: 0, ex: fx0, ey: fy0, moveType: "start", snakes: fSnakes0 }]);
+
+      if (fx0 >= n && fy0 >= m) {
+        steps.push({
+          fwdMaxD: 0, bwdMaxD: -1, met: true,
+          middleSnake: { x1: 0, y1: 0, x2: n, y2: m, totalD: 0, by: "fwd" },
+          vFwdSnap: { ...vFwd }, vBwdSnap: {},
+          msg: `D=0 无需挖隧道：源串与目标串完全一致，顺主对角线一次免费滑至 (${n},${m})！`
+        });
+        return { fwdRounds, bwdRounds, steps };
+      }
+
+      // Backward d = 0
+      let bx0 = 0, by0 = 0;
+      const bSnakes0 = [];
+      while (bx0 < n && by0 < m && strA[n - 1 - bx0] === strB[m - 1 - by0]) {
+        bSnakes0.push([n - bx0, m - by0, n - bx0 - 1, m - by0 - 1]);
+        bx0++; by0++;
+      }
+      vBwd[0] = bx0;
+      bwdRounds.push([{ d: 0, bk: 0, k: delta, px: n, py: m, mx: n, my: m, ex: n - bx0, ey: m - by0, exB: bx0, moveType: "start", snakes: bSnakes0 }]);
+
+      steps.push({
+        fwdMaxD: 0, bwdMaxD: 0, met: false, middleSnake: null,
+        vFwdSnap: { ...vFwd }, vBwdSnap: { ...vBwd },
+        msg: `第 0 步：工程队双向就位 —— 蓝队从左上 (0,0) 出发，绿队从右下 (${n},${m}) 倒挖！`
+      });
+
+      let done = false;
+      for (let d = 1; d <= maxHalf && !done; d++) {
+        // Forward step d
+        const fEdges = [];
+        const vFwdNext = { ...vFwd };
+        let meetFwd = null;
+        for (let k = -d; k <= d; k += 2) {
+          let px, py, mx, my, moveType;
+          if (k === -d || (k !== d && (vFwd[k - 1] ?? -1) < (vFwd[k + 1] ?? -1))) {
+            const pk = k + 1;
+            px = vFwd[pk] ?? 0; py = px - pk;
+            mx = px; my = py + 1; moveType = "down";
+          } else {
+            const pk = k - 1;
+            px = vFwd[pk] ?? 0; py = px - pk;
+            mx = px + 1; my = py; moveType = "right";
+          }
+          let ex = mx, ey = my;
+          const snakes = [];
+          while (ex < n && ey < m && strA[ex] === strB[ey]) {
+            snakes.push([ex, ey, ex + 1, ey + 1]);
+            ex++; ey++;
+          }
+          vFwdNext[k] = ex;
+          const edgeObj = { d, k, px, py, mx, my, ex, ey, moveType, snakes };
+          fEdges.push(edgeObj);
+
+          const bk = delta - k;
+          if (odd && !meetFwd && bk >= -(d - 1) && bk <= (d - 1) && vBwd[bk] !== undefined) {
+            if (ex + vBwd[bk] >= n) {
+              meetFwd = { x1: mx, y1: my, x2: ex, y2: ey, totalD: 2 * d - 1, by: "fwd", k };
+            }
+          }
+        }
+        Object.assign(vFwd, vFwdNext);
+        fwdRounds.push(fEdges);
+
+        if (meetFwd) {
+          steps.push({
+            fwdMaxD: d, bwdMaxD: d - 1, met: true, middleSnake: meetFwd,
+            vFwdSnap: { ...vFwd }, vBwdSnap: { ...vBwd },
+            msg: `💥 第 ${2 * d - 1} 步会师成功！蓝队 (d=${d}) 与绿队 (d=${d - 1}) 在 k=${meetFwd.k >= 0 ? "+" + meetFwd.k : meetFwd.k} 碰撞！锁定中间蛇 (${meetFwd.x1},${meetFwd.y1})→(${meetFwd.x2},${meetFwd.y2})。`
+          });
+          done = true;
+          break;
+        }
+        steps.push({
+          fwdMaxD: d, bwdMaxD: d - 1, met: false, middleSnake: null,
+          vFwdSnap: { ...vFwd }, vBwdSnap: { ...vBwd },
+          msg: `第 ${2 * d - 1} 步：蓝队正向推进第 d=${d} 轮，更新 V_fwd（与绿队尚未重叠）。`
+        });
+
+        // Backward step d
+        const bEdges = [];
+        const vBwdNext = { ...vBwd };
+        let meetBwd = null;
+        for (let bk = -d; bk <= d; bk += 2) {
+          let prevBx, prevBy, mxB, myB, moveType;
+          if (bk === -d || (bk !== d && (vBwd[bk - 1] ?? -1) < (vBwd[bk + 1] ?? -1))) {
+            const pbk = bk + 1;
+            prevBx = vBwd[pbk] ?? 0; prevBy = prevBx - pbk;
+            mxB = prevBx; myB = prevBy + 1; moveType = "down";
+          } else {
+            const pbk = bk - 1;
+            prevBx = vBwd[pbk] ?? 0; prevBy = prevBx - pbk;
+            mxB = prevBx + 1; myB = prevBy; moveType = "right";
+          }
+          let exB = mxB, eyB = myB;
+          const snakes = [];
+          while (exB < n && eyB < m && strA[n - 1 - exB] === strB[m - 1 - eyB]) {
+            snakes.push([n - exB, m - eyB, n - exB - 1, m - eyB - 1]);
+            exB++; eyB++;
+          }
+          vBwdNext[bk] = exB;
+          const edgeObj = {
+            d, bk, k: delta - bk,
+            px: n - prevBx, py: m - prevBy,
+            mx: n - mxB, my: m - myB,
+            ex: n - exB, ey: m - eyB,
+            exB, moveType, snakes
+          };
+          bEdges.push(edgeObj);
+
+          const k = delta - bk;
+          if (!odd && !meetBwd && k >= -d && k <= d && vFwd[k] !== undefined) {
+            if (exB + vFwd[k] >= n) {
+              meetBwd = { x1: n - exB, y1: m - eyB, x2: n - mxB, y2: m - myB, totalD: 2 * d, by: "bwd", k };
+            }
+          }
+        }
+        Object.assign(vBwd, vBwdNext);
+        bwdRounds.push(bEdges);
+
+        if (meetBwd) {
+          steps.push({
+            fwdMaxD: d, bwdMaxD: d, met: true, middleSnake: meetBwd,
+            vFwdSnap: { ...vFwd }, vBwdSnap: { ...vBwd },
+            msg: `💥 第 ${2 * d} 步会师成功！绿队 (d=${d}) 与蓝队 (d=${d}) 在 k=${meetBwd.k >= 0 ? "+" + meetBwd.k : meetBwd.k} 碰撞！锁定中间蛇 (${meetBwd.x1},${meetBwd.y1})→(${meetBwd.x2},${meetBwd.y2})。`
+          });
+          done = true;
+          break;
+        }
+        steps.push({
+          fwdMaxD: d, bwdMaxD: d, met: false, middleSnake: null,
+          vFwdSnap: { ...vFwd }, vBwdSnap: { ...vBwd },
+          msg: `第 ${2 * d} 步：绿队反向倒挖第 d=${d} 轮，更新 V_bwd（向左上逼近蓝队）。`
+        });
+      }
+      return { fwdRounds, bwdRounds, steps };
+    }
+
+    function renderVTable(stepIdx) {
+      const tbl = document.getElementById("vTable");
+      if (isBidirectional) {
+        const biStep = trace.bi.steps[Math.min(stepIdx, trace.bi.steps.length - 1)];
+        const dLim = Math.max(1, Math.ceil(trace.foundD / 2));
+        let hRow = "<tr><th>正向 k / 反向 bk</th>";
+        let fRow = "<tr><th>正向 V_fwd[k]</th>";
+        let bRow = "<tr><th>反向 V_bwd[bk]</th>";
+        for (let k = -dLim; k <= dLim; k++) {
+          const isMeetK = biStep.met && biStep.middleSnake && biStep.middleSnake.k === k;
+          const cls = isMeetK ? 'class="active-k"' : "";
+          hRow += `<th ${cls}>${k >= 0 ? "+" + k : k}</th>`;
+          fRow += `<td ${cls}>${biStep.vFwdSnap[k] !== undefined ? biStep.vFwdSnap[k] : "-"}</td>`;
+          bRow += `<td ${cls}>${biStep.vBwdSnap[k] !== undefined ? biStep.vBwdSnap[k] : "-"}</td>`;
+        }
+        tbl.innerHTML = hRow + "</tr>" + fRow + "</tr>" + bRow + "</tr>";
+        return;
+      }
+
+      const maxK = Math.min(trace.foundD, Math.max(trace.n, trace.m));
+      const stepObj = trace.history[Math.min(stepIdx, trace.foundD)];
+      const activeKs = new Set(stepObj.edges.map(e => e.k));
+
+      let hRow = "<tr><th>对角线 k</th>";
+      let vRow = "<tr><th>最大横坐标 V[k]</th>";
+      let pRow = "<tr><th>对应顶点 (x, y)</th>";
+
+      for (let k = -trace.foundD; k <= trace.foundD; k++) {
+        const isAct = activeKs.has(k);
+        const cls = isAct ? 'class="active-k"' : "";
+        hRow += `<th ${cls}>k=${k}</th>`;
+        const val = stepObj.v[k];
+        if (val !== undefined) {
+          const y = val - k;
+          vRow += `<td ${cls}>${val}</td>`;
+          pRow += `<td ${cls}>(${val}, ${y})</td>`;
+        } else {
+          vRow += `<td>-</td>`;
+          pRow += `<td>-</td>`;
+        }
+      }
+      tbl.innerHTML = hRow + "</tr>" + vRow + "</tr>" + pRow + "</tr>";
+    }
+
+    function renderStepLog(stepIdx) {
+      const logEl = document.getElementById("stepLog");
+      if (isBidirectional) {
+        const biStep = trace.bi.steps[Math.min(stepIdx, trace.bi.steps.length - 1)];
+        let extra = "";
+        if (biStep.met && biStep.middleSnake) {
+          const ms = biStep.middleSnake;
+          extra = `<br/>🏆 <strong>分治切分完成（空间严格 O(N+M)）！</strong><br/>` +
+                  `• <strong>左上子问题</strong>：[0..${ms.x1}] × [0..${ms.y1}]（丢弃旧数组后复用递归）<br/>` +
+                  `• <strong>中间蛇 (会师点)</strong>：(${ms.x1},${ms.y1}) ➔ (${ms.x2},${ms.y2})<br/>` +
+                  `• <strong>右下子问题</strong>：[${ms.x2}..${trace.n}] × [${ms.y2}..${trace.m}]`;
+        } else {
+          extra = `<br/>💡 <strong>提示</strong>：点击“下一步”或按 → 看蓝绿两队如何逐轮逼近并在中间蛇会师！`;
+        }
+        logEl.innerHTML = `
+          <strong>【双向挖隧道寻找中间蛇 (Middle Snake) 模式】</strong><br/>
+          • <strong>当前进度</strong>：${biStep.msg}${extra}
+        `;
+        return;
+      }
+      const d = Math.min(stepIdx, trace.foundD);
+      const stepObj = trace.history[d];
+      let html = `<strong>第 D = ${d} 轮状态转移（仅枚举与 ${d} 奇偶同号的对角线 k）：</strong><br/>`;
+      stepObj.edges.forEach(e => {
+        if (e.ex < 0 || e.ey < 0 || e.ex > trace.n + 1 || e.ey > trace.m + 1) return;
+        const moveDesc = d === 0 ? `起点初始化 (0,0)` :
+          (e.moveType === "right" ? `从 k=${e.k-1} 向右删除达 (${e.mx},${e.my})` : `从 k=${e.k+1} 向下插入达 (${e.mx},${e.my})`);
+        const snakeDesc = e.snakes.length > 0
+          ? ` ➔ <strong>触发 ${e.snakes.length} 格免费对角滑梯滑至 (${e.ex},${e.ey})！</strong>`
+          : `（无滑梯，停在 (${e.ex},${e.ey})）`;
+        html += `• <code>k = ${e.k >= 0 ? '+'+e.k : e.k}</code>：${moveDesc}${snakeDesc}<br/>`;
+      });
+      if (stepIdx >= trace.foundD) {
+        html += `<br/>🎉 <strong>已抵达右下角终点 (${trace.n}, ${trace.m})！算法立即终止，最小编辑距离 D* = ${trace.foundD}。</strong>`;
+      }
+      logEl.innerHTML = html;
+    }
+
+    function renderDiffOutput() {
+      const out = document.getElementById("diffOutput");
+      out.innerHTML = trace.path.map(seg => {
+        if (seg.type === "right") return `<span class="diff-token diff-del">-${seg.ch}</span>`;
+        if (seg.type === "down") return `<span class="diff-token diff-ins">+${seg.ch}</span>`;
+        return `<span class="diff-token diff-keep"> ${seg.ch}</span>`;
+      }).join("");
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color, width = 3) {
+      const headlen = 9;
+      const dx = x2 - x1, dy = y2 - y1;
+      const angle = Math.atan2(dy, dx);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function renderCanvas() {
+      const canvas = document.getElementById("gridCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const n = trace.n, m = trace.m;
+      const padX = 75, padY = 65;
+      const cell = Math.min((canvas.width - padX * 1.8) / Math.max(n, 1), (canvas.height - padY * 1.8) / Math.max(m, 1));
+      const gx = x => padX + x * cell;
+      const gy = y => padY + y * cell;
+
+      // 1. Draw base grid lines
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1.2;
+      for (let x = 0; x <= n; x++) {
+        ctx.beginPath(); ctx.moveTo(gx(x), gy(0)); ctx.lineTo(gx(x), gy(m)); ctx.stroke();
+      }
+      for (let y = 0; y <= m; y++) {
+        ctx.beginPath(); ctx.moveTo(gx(0), gy(y)); ctx.lineTo(gx(n), gy(y)); ctx.stroke();
+      }
+
+      // 2. Draw all matching diagonals (Snakes)
+      ctx.save();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.55)";
+      ctx.lineWidth = 2.2;
+      for (let x = 0; x < n; x++) {
+        for (let y = 0; y < m; y++) {
+          if (A[x] === B[y]) {
+            ctx.beginPath();
+            ctx.moveTo(gx(x), gy(y));
+            ctx.lineTo(gx(x + 1), gy(y + 1));
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+
+      // 3. Draw character headers
+      ctx.font = "bold 16px Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (let x = 0; x < n; x++) {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(gx(x + 0.5) - 14, gy(0) - 42, 28, 24);
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillText(A[x], gx(x + 0.5), gy(0) - 30);
+      }
+      for (let y = 0; y < m; y++) {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(gx(0) - 46, gy(y + 0.5) - 12, 28, 24);
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillText(B[y], gx(0) - 32, gy(y + 0.5));
+      }
+
+      // Coordinate labels
+      ctx.font = "12px Menlo, monospace";
+      ctx.fillStyle = "#94a3b8";
+      for (let x = 0; x <= n; x++) ctx.fillText(x, gx(x), gy(0) - 10);
+      for (let y = 0; y <= m; y++) ctx.fillText(y, gx(0) - 12, gy(y));
+
+      if (isBidirectional) {
+        const biStep = trace.bi.steps[Math.min(currentStep, trace.bi.steps.length - 1)];
+
+        // 1. Draw Forward wavefront (Blue, from top-left (0,0))
+        for (let d = 0; d <= biStep.fwdMaxD && d < trace.bi.fwdRounds.length; d++) {
+          const isCurr = (d === biStep.fwdMaxD);
+          const alpha = isCurr ? 0.95 : 0.35;
+          trace.bi.fwdRounds[d].forEach(e => {
+            if (e.mx < 0 || e.my < 0 || e.mx > n || e.my > m) return;
+            if (d > 0) {
+              drawArrow(ctx, gx(e.px), gy(e.py), gx(e.mx), gy(e.my), `rgba(96, 165, 250, ${alpha})`, isCurr ? 2.8 : 1.8);
+            }
+            e.snakes.forEach(([sx1, sy1, sx2, sy2]) => {
+              if (sx2 <= n && sy2 <= m) {
+                drawArrow(ctx, gx(sx1), gy(sy1), gx(sx2), gy(sy2), `rgba(59, 130, 246, ${alpha})`, isCurr ? 3.5 : 2.0);
+              }
+            });
+            if (isCurr && e.ex >= 0 && e.ex <= n && e.ey >= 0 && e.ey <= m) {
+              ctx.fillStyle = "#60a5fa";
+              ctx.beginPath();
+              ctx.arc(gx(e.ex), gy(e.ey), 6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+        }
+
+        // 2. Draw Backward wavefront (Green, from bottom-right (n,m))
+        for (let d = 0; d <= biStep.bwdMaxD && d < trace.bi.bwdRounds.length; d++) {
+          const isCurr = (d === biStep.bwdMaxD);
+          const alpha = isCurr ? 0.95 : 0.35;
+          trace.bi.bwdRounds[d].forEach(e => {
+            if (e.mx < 0 || e.my < 0 || e.mx > n || e.my > m) return;
+            if (d > 0) {
+              drawArrow(ctx, gx(e.px), gy(e.py), gx(e.mx), gy(e.my), `rgba(52, 211, 153, ${alpha})`, isCurr ? 2.8 : 1.8);
+            }
+            e.snakes.forEach(([sx1, sy1, sx2, sy2]) => {
+              if (sx2 >= 0 && sy2 >= 0 && sx1 <= n && sy1 <= m) {
+                drawArrow(ctx, gx(sx1), gy(sy1), gx(sx2), gy(sy2), `rgba(16, 185, 129, ${alpha})`, isCurr ? 3.5 : 2.0);
+              }
+            });
+            if (isCurr && e.ex >= 0 && e.ex <= n && e.ey >= 0 && e.ey <= m) {
+              ctx.fillStyle = "#34d399";
+              ctx.beginPath();
+              ctx.arc(gx(e.ex), gy(e.ey), 6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+        }
+
+        // 3. On collision, draw Subproblem Split Boxes & Golden Middle Snake
+        if (biStep.met && biStep.middleSnake) {
+          const ms = biStep.middleSnake;
+          ctx.save();
+          ctx.fillStyle = "rgba(59, 130, 246, 0.14)";
+          ctx.strokeStyle = "#3b82f6";
+          ctx.setLineDash([6, 4]);
+          ctx.lineWidth = 2.2;
+          ctx.fillRect(gx(0), gy(0), gx(ms.x1) - gx(0), gy(ms.y1) - gy(0));
+          ctx.strokeRect(gx(0), gy(0), gx(ms.x1) - gx(0), gy(ms.y1) - gy(0));
+
+          ctx.fillStyle = "rgba(16, 185, 129, 0.14)";
+          ctx.strokeStyle = "#10b981";
+          ctx.fillRect(gx(ms.x2), gy(ms.y2), gx(n) - gx(ms.x2), gy(m) - gy(ms.y2));
+          ctx.strokeRect(gx(ms.x2), gy(ms.y2), gx(n) - gx(ms.x2), gy(m) - gy(ms.y2));
+
+          ctx.font = "bold 12px -apple-system, sans-serif";
+          ctx.fillStyle = "#93c5fd";
+          if (ms.x1 > 0.5 && ms.y1 > 0.5) ctx.fillText("左上子问题", gx(ms.x1 * 0.5), gy(ms.y1 * 0.5));
+          ctx.fillStyle = "#6ee7b7";
+          if (n - ms.x2 > 0.5 && m - ms.y2 > 0.5) ctx.fillText("右下子问题", gx((ms.x2 + n) * 0.5), gy((ms.y2 + m) * 0.5));
+          ctx.restore();
+
+          // Highlight Golden Middle Snake
+          ctx.save();
+          ctx.strokeStyle = "rgba(251, 191, 36, 0.45)";
+          ctx.lineWidth = 12;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(gx(ms.x1), gy(ms.y1));
+          ctx.lineTo(gx(ms.x2), gy(ms.y2));
+          ctx.stroke();
+          ctx.restore();
+
+          drawArrow(ctx, gx(ms.x1), gy(ms.y1), gx(ms.x2), gy(ms.y2), "#f59e0b", 5.5);
+          ctx.fillStyle = "#fde047";
+          ctx.font = "bold 13px -apple-system, sans-serif";
+          ctx.fillText("★ 中间蛇会师!", gx((ms.x1 + ms.x2) * 0.5), gy((ms.y1 + ms.y2) * 0.5) - 14);
+        }
+      } else {
+        // Draw historical edges up to currentStep
+        const maxD = Math.min(currentStep, trace.foundD);
+        for (let d = 0; d <= maxD; d++) {
+          const isCurr = (d === maxD);
+          const alpha = isCurr ? 1.0 : 0.35;
+          trace.history[d].edges.forEach(e => {
+            if (e.mx < 0 || e.my < 0 || e.mx > n || e.my > m) return;
+            if (d > 0) {
+              const col = e.moveType === "right"
+                ? `rgba(239, 68, 68, ${alpha})`
+                : `rgba(16, 185, 129, ${alpha})`;
+              drawArrow(ctx, gx(e.px), gy(e.py), gx(e.mx), gy(e.my), col, isCurr ? 3.2 : 2);
+            }
+            e.snakes.forEach(([sx1, sy1, sx2, sy2]) => {
+              if (sx2 <= n && sy2 <= m) {
+                drawArrow(ctx, gx(sx1), gy(sy1), gx(sx2), gy(sy2), `rgba(59, 130, 246, ${alpha})`, isCurr ? 3.8 : 2.2);
+              }
+            });
+            if (isCurr && e.ex >= 0 && e.ex <= n && e.ey >= 0 && e.ey <= m) {
+              ctx.fillStyle = "#fde047";
+              ctx.beginPath();
+              ctx.arc(gx(e.ex), gy(e.ey), 6.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+        }
+
+        // If reached end, highlight optimal path glow
+        if (currentStep >= trace.foundD) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(253, 224, 71, 0.45)";
+          ctx.lineWidth = 10;
+          ctx.lineCap = "round";
+          trace.path.forEach(seg => {
+            ctx.beginPath();
+            ctx.moveTo(gx(seg.x1), gy(seg.y1));
+            ctx.lineTo(gx(seg.x2), gy(seg.y2));
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
+      }
+
+      // Draw vertices
+      for (let x = 0; x <= n; x++) {
+        for (let y = 0; y <= m; y++) {
+          ctx.fillStyle = (x === 0 && y === 0) ? "#3b82f6" : ((x === n && y === m) ? "#10b981" : "#64748b");
+          const r = (x === 0 && y === 0) || (x === n && y === m) ? 6 : 3.2;
+          ctx.beginPath();
+          ctx.arc(gx(x), gy(y), r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function maxStepsForMode() {
+      return isBidirectional ? Math.max(0, trace.bi.steps.length - 1) : trace.foundD;
+    }
+
+    function updateUI() {
+      const maxSt = maxStepsForMode();
+      if (currentStep > maxSt) currentStep = maxSt;
+      const d = Math.min(currentStep, maxSt);
+      document.getElementById("statD").textContent = `${d} / ${trace.foundD}`;
+      document.getElementById("canvasTitle").textContent = isBidirectional
+        ? "双向 Myers 搜索：蓝队(左上) vs. 绿队(右下) 挖隧道会师"
+        : "编辑图 (Edit Graph) 与对角线贪心波前";
+
+      let explored = 0;
+      if (isBidirectional) {
+        const biStep = trace.bi.steps[d];
+        for (let i = 0; i <= biStep.fwdMaxD && i < trace.bi.fwdRounds.length; i++) explored += trace.bi.fwdRounds[i].length;
+        for (let i = 0; i <= biStep.bwdMaxD && i < trace.bi.bwdRounds.length; i++) explored += trace.bi.bwdRounds[i].length;
+      } else {
+        for (let i = 0; i <= d; i++) explored += trace.history[i].edges.length;
+      }
+      const totalDp = (trace.n + 1) * (trace.m + 1);
+      const pct = Math.round((explored / totalDp) * 100);
+      document.getElementById("statMyersNodes").textContent = `${explored} (${pct}%)`;
+      document.getElementById("statDpNodes").textContent = `${totalDp} (100%)`;
+
+      renderVTable(currentStep);
+      renderStepLog(currentStep);
+      renderDiffOutput();
+      renderCanvas();
+    }
+
+    function stepNext() {
+      const maxSt = maxStepsForMode();
+      if (currentStep < maxSt) currentStep++;
+      else currentStep = 0;
+      updateUI();
+    }
+
+    function stepPrev() {
+      if (currentStep > 0) currentStep--;
+      updateUI();
+    }
+
+    function togglePlay() {
+      const btn = document.getElementById("playBtn");
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+        btn.textContent = "▶ 自动播放";
+      } else {
+        btn.textContent = "⏸ 暂停播放";
+        playTimer = setInterval(() => {
+          const maxSt = maxStepsForMode();
+          if (currentStep < maxSt) {
+            currentStep++;
+          } else {
+            currentStep = 0;
+          }
+          updateUI();
+        }, 1100);
+      }
+    }
+
+    function toggleBidirectional() {
+      isBidirectional = !isBidirectional;
+      const btn = document.getElementById("biBtn");
+      btn.classList.toggle("active-mode", isBidirectional);
+      currentStep = maxStepsForMode();
+      updateUI();
+    }
+
+    function applyPreset(valA, valB) {
+      document.getElementById("inputA").value = valA;
+      document.getElementById("inputB").value = valB;
+      resetStrings();
+    }
+
+    function resetStrings() {
+      const valA = document.getElementById("inputA").value.trim().toUpperCase() || "ABCABBA";
+      const valB = document.getElementById("inputB").value.trim().toUpperCase() || "CBABAC";
+      A = valA;
+      B = valB;
+      trace = computeMyers(A, B);
+      currentStep = maxStepsForMode();
+      updateUI();
+    }
+
+    window.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT") return;
+      if (e.key === "ArrowRight") stepNext();
+      else if (e.key === "ArrowLeft") stepPrev();
+      else if (e.key === " ") { e.preventDefault(); togglePlay(); }
+    });
+
+    resetStrings();
+  </script>
+</body>
+</html>
